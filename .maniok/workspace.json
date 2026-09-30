@@ -1,0 +1,1047 @@
+{
+  "configuration" : { },
+  "description" : "Description",
+  "documentation" : {
+    "sections" : [ {
+      "content" : "# Alvyn architecture\n\nAlvyn is a TypeScript library for event history in PostgreSQL. Applications record events, replay them into state, and consume the history. This repository also contains a bank-account example and a product website.\n\n![Alvyn System Context](embed:alvyn-context)\n\n![Alvyn Containers](embed:alvyn-containers)\n\n## Alvyn Library\n\nThe package exports one entry point, `alvyn`, from `src/index.ts`. Its principal runtime API is `EventStore`. It also exports `migrateEventStore`, `defineAggregate`, `defineSnapshot`, `defineProjection`, public types, error classes, and `MAX_READ_EVENTS_PAGE_LIMIT`. The package export in `package.json` points to the built `dist/index.js` and its type declarations.\n\nClient code supplies a `pg.Pool`, creates an `EventStore`, and calls `setup()` before it reads or writes events. A deployment job can call `migrateEventStore({ pool })` instead. Client replicas can then use `migrationMode: \"verify\"`. Clients define event maps and reducers with `defineAggregate`. They pass the store to aggregate `append` and `load` methods. The example server uses these imports and calls in `examples/example-alvyn-full-stack-app/server.ts` and `server/aggregates/`.\n\nClients select stream IDs, expected versions, and optional idempotency keys. They supply projection handlers, outbox handlers, and any encryption secrets that they need. They manage external effects and subscription cursors. The library runs in the importing Node.js process. The npm package boundary does not create a separate service. PostgreSQL hosts the schema, including `events`, `idempotency_keys`, `outbox`, `crypto_keys`, `projections`, and `schema_version` (`src/schema/run-migrations.ts`).\n\n![Alvyn Library Components](embed:alvyn-library-components)\n\n`EventStore` coordinates the library API (`src/event-store.ts`). `Schema` applies or verifies migrations (`src/schema/`). `Stream` checks versions and idempotency keys, writes events and outbox entries, and reads event pages (`src/stream/`). `Aggregate` replays client reducers (`src/aggregate/`). `Snapshot` stores calculated state as an event in the source stream (`src/snapshot/`).\n\n`Subscription` reads committed events, then waits for notifications or a polling interval (`src/subscription/`). `Projection` calls client handlers and records their positions (`src/projection/`). `Outbox` passes claimed entries to a client handler (`src/outbox/`). `Crypto` encrypts selected fields and manages per-entity keys (`src/crypto/`). `Upcaster` transforms event data during reads (`src/upcaster/`). These components run with the library in the client process.\n\n## Example Alvyn Full Stack App Server\n\nThe example server owns the `/graphql` endpoint and creates its own `pg.Pool` and `EventStore` (`examples/example-alvyn-full-stack-app/server.ts`). Its GraphQL API handles account queries, mutations, and subscriptions. The Bank Account Aggregate defines account status from account events. The Transaction Aggregate and Balance Snapshot define transaction events and a derived balance (`server/aggregates/`). The server imports the library through `alvyn` and uses aggregate handles, a registered snapshot, and event subscriptions.\n\n![Example Server Components](embed:example-server-components)\n\n## Example Alvyn Full Stack App Client\n\nThe React account components collect account commands and display balances and transactions (`examples/example-alvyn-full-stack-app/app/components/`). The GraphQL client sends queries and mutations to `/graphql` over HTTP. It receives subscriptions through SSE (`app/entry-client.tsx`). This browser application does not import the Alvyn library.\n\n![Example Client Components](embed:example-client-components)\n\n## Website Server\n\nThe Next.js server renders the landing page and documentation pages (`website/src/app/`). The Documentation Source loads content from the website's MDX collection (`website/src/lib/source.ts`). The Search API builds search data from that source (`website/src/app/api/search/route.ts`).\n\n![Website Server Components](embed:website-server-components)\n\n## Website Client\n\nThe Journey Simulator runs a local, interactive example in the browser (`website/src/components/JourneySimulator.tsx`). The Search Dialog requests results from `/api/search` (`website/src/components/search.tsx`). The simulator does not write events to PostgreSQL.\n\n![Website Client Components](embed:website-client-components)\n",
+      "filename" : "overview.md",
+      "format" : "Markdown",
+      "order" : 1,
+      "title" : ""
+    } ]
+  },
+  "id" : 0,
+  "model" : {
+    "people" : [ {
+      "description" : "Integrates Alvyn or uses the repository's example and documentation.",
+      "id" : "1",
+      "name" : "User",
+      "properties" : {
+        "structurizr.dsl.identifier" : "user"
+      },
+      "relationships" : [ {
+        "description" : "Defines typed domain models with",
+        "destinationId" : "8",
+        "id" : "29",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Defines typed domain models with",
+        "destinationId" : "4",
+        "id" : "30",
+        "linkedRelationshipId" : "29",
+        "sourceId" : "1"
+      }, {
+        "description" : "Defines typed domain models with",
+        "destinationId" : "3",
+        "id" : "31",
+        "linkedRelationshipId" : "29",
+        "sourceId" : "1"
+      }, {
+        "description" : "Uses the bank-account demo through",
+        "destinationId" : "20",
+        "id" : "32",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Uses the bank-account demo through",
+        "destinationId" : "19",
+        "id" : "33",
+        "linkedRelationshipId" : "32",
+        "sourceId" : "1"
+      }, {
+        "description" : "Explores event history through",
+        "destinationId" : "27",
+        "id" : "34",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Explores event history through",
+        "destinationId" : "26",
+        "id" : "35",
+        "linkedRelationshipId" : "34",
+        "sourceId" : "1"
+      }, {
+        "description" : "Searches documentation through",
+        "destinationId" : "28",
+        "id" : "36",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      } ],
+      "tags" : "Element,Person"
+    } ],
+    "softwareSystems" : [ {
+      "description" : "Hosts the Alvyn event-store schema and executes its queries.",
+      "documentation" : { },
+      "id" : "2",
+      "name" : "PostgreSQL",
+      "properties" : {
+        "structurizr.dsl.identifier" : "postgres"
+      },
+      "tags" : "Element,Software System"
+    }, {
+      "containers" : [ {
+        "components" : [ {
+          "description" : "Exposes setup, append, reads, transactions, subscriptions, and maintenance operations.",
+          "documentation" : { },
+          "id" : "5",
+          "name" : "EventStore",
+          "properties" : {
+            "structurizr.dsl.identifier" : "eventStore"
+          },
+          "relationships" : [ {
+            "description" : "Migrates or verifies with",
+            "destinationId" : "6",
+            "id" : "55",
+            "sourceId" : "5",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Appends and reads through",
+            "destinationId" : "7",
+            "id" : "56",
+            "sourceId" : "5",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Starts event streams through",
+            "destinationId" : "10",
+            "id" : "57",
+            "sourceId" : "5",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Runs read models through",
+            "destinationId" : "11",
+            "id" : "58",
+            "sourceId" : "5",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Processes entries through",
+            "destinationId" : "12",
+            "id" : "59",
+            "sourceId" : "5",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Manages keys through",
+            "destinationId" : "13",
+            "id" : "60",
+            "sourceId" : "5",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Registers event transformations with",
+            "destinationId" : "14",
+            "id" : "61",
+            "sourceId" : "5",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript"
+        }, {
+          "description" : "Migrates or verifies the versioned PostgreSQL schema.",
+          "documentation" : { },
+          "id" : "6",
+          "name" : "Schema",
+          "properties" : {
+            "structurizr.dsl.identifier" : "schema"
+          },
+          "relationships" : [ {
+            "description" : "Creates and verifies tables in",
+            "destinationId" : "2",
+            "id" : "68",
+            "sourceId" : "6",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript, SQL"
+        }, {
+          "description" : "Appends, reads, and pages events with version and idempotency checks.",
+          "documentation" : { },
+          "id" : "7",
+          "name" : "Stream",
+          "properties" : {
+            "structurizr.dsl.identifier" : "stream"
+          },
+          "relationships" : [ {
+            "description" : "Encrypts and decrypts fields with",
+            "destinationId" : "13",
+            "id" : "64",
+            "sourceId" : "7",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Transforms event payloads with",
+            "destinationId" : "14",
+            "id" : "65",
+            "sourceId" : "7",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Writes and reads events in",
+            "destinationId" : "2",
+            "id" : "71",
+            "sourceId" : "7",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript, SQL"
+        }, {
+          "description" : "Builds typed aggregate handles and replays events through client reducers.",
+          "documentation" : { },
+          "id" : "8",
+          "name" : "Aggregate",
+          "properties" : {
+            "structurizr.dsl.identifier" : "aggregate"
+          },
+          "relationships" : [ {
+            "description" : "Loads and appends through",
+            "destinationId" : "5",
+            "id" : "62",
+            "sourceId" : "8",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript"
+        }, {
+          "description" : "Builds snapshot handles and stores derived snapshot events in their source streams.",
+          "documentation" : { },
+          "id" : "9",
+          "name" : "Snapshot",
+          "properties" : {
+            "structurizr.dsl.identifier" : "snapshot"
+          },
+          "relationships" : [ {
+            "description" : "Loads and appends snapshot events through",
+            "destinationId" : "5",
+            "id" : "63",
+            "sourceId" : "9",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript"
+        }, {
+          "description" : "Reads committed event history and waits for new events with LISTEN/NOTIFY or polling.",
+          "documentation" : { },
+          "id" : "10",
+          "name" : "Subscription",
+          "properties" : {
+            "structurizr.dsl.identifier" : "subscription"
+          },
+          "relationships" : [ {
+            "description" : "Transforms subscribed events with",
+            "destinationId" : "14",
+            "id" : "66",
+            "sourceId" : "10",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Reads events and listens for notifications from",
+            "destinationId" : "2",
+            "id" : "72",
+            "sourceId" : "10",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript, SQL"
+        }, {
+          "description" : "Runs client handlers from event history and stores checkpoints.",
+          "documentation" : { },
+          "id" : "11",
+          "name" : "Projection",
+          "properties" : {
+            "structurizr.dsl.identifier" : "projection"
+          },
+          "relationships" : [ {
+            "description" : "Transforms projected events with",
+            "destinationId" : "14",
+            "id" : "67",
+            "sourceId" : "11",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Reads events and stores checkpoints in",
+            "destinationId" : "2",
+            "id" : "73",
+            "sourceId" : "11",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript, SQL"
+        }, {
+          "description" : "Claims and marks outbox entries for client-supplied handlers.",
+          "documentation" : { },
+          "id" : "12",
+          "name" : "Outbox",
+          "properties" : {
+            "structurizr.dsl.identifier" : "outbox"
+          },
+          "relationships" : [ {
+            "description" : "Claims and marks entries in",
+            "destinationId" : "2",
+            "id" : "74",
+            "sourceId" : "12",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript, SQL"
+        }, {
+          "description" : "Encrypts event fields and manages per-entity keys.",
+          "documentation" : { },
+          "id" : "13",
+          "name" : "Crypto",
+          "properties" : {
+            "structurizr.dsl.identifier" : "crypto"
+          },
+          "relationships" : [ {
+            "description" : "Stores and revokes keys in",
+            "destinationId" : "2",
+            "id" : "75",
+            "sourceId" : "13",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript, Node.js crypto"
+        }, {
+          "description" : "Transforms old event payloads during reads.",
+          "documentation" : { },
+          "id" : "14",
+          "name" : "Upcaster",
+          "properties" : {
+            "structurizr.dsl.identifier" : "upcaster"
+          },
+          "tags" : "Element,Component",
+          "technology" : "TypeScript"
+        } ],
+        "description" : "Runs inside a client's Node.js process to persist and replay events.",
+        "documentation" : { },
+        "id" : "4",
+        "name" : "Alvyn Library",
+        "properties" : {
+          "structurizr.dsl.identifier" : "library"
+        },
+        "relationships" : [ {
+          "description" : "Creates and verifies tables in",
+          "destinationId" : "2",
+          "id" : "69",
+          "linkedRelationshipId" : "68",
+          "sourceId" : "4"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "TypeScript, Node.js"
+      }, {
+        "components" : [ {
+          "description" : "Handles bank-account queries, mutations, and subscriptions.",
+          "documentation" : { },
+          "id" : "16",
+          "name" : "GraphQL API",
+          "properties" : {
+            "structurizr.dsl.identifier" : "exampleGraphql"
+          },
+          "relationships" : [ {
+            "description" : "Loads and appends accounts with",
+            "destinationId" : "17",
+            "id" : "42",
+            "sourceId" : "16",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Loads transactions and balances with",
+            "destinationId" : "18",
+            "id" : "43",
+            "sourceId" : "16",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Initializes and reads from",
+            "destinationId" : "5",
+            "id" : "44",
+            "sourceId" : "16",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Initializes and reads from",
+            "destinationId" : "4",
+            "id" : "45",
+            "linkedRelationshipId" : "44",
+            "sourceId" : "16"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript, GraphQL Yoga"
+        }, {
+          "description" : "Defines account state and its event reducers.",
+          "documentation" : { },
+          "id" : "17",
+          "name" : "Bank Account Aggregate",
+          "properties" : {
+            "structurizr.dsl.identifier" : "exampleBankAccount"
+          },
+          "relationships" : [ {
+            "description" : "Defines its model with",
+            "destinationId" : "8",
+            "id" : "48",
+            "sourceId" : "17",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Defines its model with",
+            "destinationId" : "4",
+            "id" : "49",
+            "linkedRelationshipId" : "48",
+            "sourceId" : "17"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript"
+        }, {
+          "description" : "Defines transaction events and the derived account balance.",
+          "documentation" : { },
+          "id" : "18",
+          "name" : "Transaction Aggregate and Balance Snapshot",
+          "properties" : {
+            "structurizr.dsl.identifier" : "exampleTransaction"
+          },
+          "relationships" : [ {
+            "description" : "Defines its transaction model with",
+            "destinationId" : "8",
+            "id" : "51",
+            "sourceId" : "18",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Defines its transaction model with",
+            "destinationId" : "4",
+            "id" : "52",
+            "linkedRelationshipId" : "51",
+            "sourceId" : "18"
+          }, {
+            "description" : "Defines its balance with",
+            "destinationId" : "9",
+            "id" : "53",
+            "sourceId" : "18",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript"
+        } ],
+        "description" : "Serves bank-account GraphQL operations and subscriptions.",
+        "documentation" : { },
+        "id" : "15",
+        "name" : "Example Alvyn Full Stack App Server",
+        "properties" : {
+          "structurizr.dsl.identifier" : "exampleServer"
+        },
+        "relationships" : [ {
+          "description" : "Initializes and reads from",
+          "destinationId" : "5",
+          "id" : "46",
+          "linkedRelationshipId" : "44",
+          "sourceId" : "15"
+        }, {
+          "description" : "Initializes and reads from",
+          "destinationId" : "4",
+          "id" : "47",
+          "linkedRelationshipId" : "44",
+          "sourceId" : "15"
+        }, {
+          "description" : "Defines its model with",
+          "destinationId" : "8",
+          "id" : "50",
+          "linkedRelationshipId" : "48",
+          "sourceId" : "15"
+        }, {
+          "description" : "Defines its balance with",
+          "destinationId" : "9",
+          "id" : "54",
+          "linkedRelationshipId" : "53",
+          "sourceId" : "15"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "TypeScript, Elysia, GraphQL Yoga, Node.js"
+      }, {
+        "components" : [ {
+          "description" : "Collects account commands and displays account data.",
+          "documentation" : { },
+          "id" : "20",
+          "name" : "Account Components",
+          "properties" : {
+            "structurizr.dsl.identifier" : "exampleUi"
+          },
+          "relationships" : [ {
+            "description" : "Submits account operations through",
+            "destinationId" : "21",
+            "id" : "37",
+            "sourceId" : "20",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "React"
+        }, {
+          "description" : "Sends queries and mutations over HTTP and subscriptions over SSE.",
+          "documentation" : { },
+          "id" : "21",
+          "name" : "GraphQL Client",
+          "properties" : {
+            "structurizr.dsl.identifier" : "exampleApollo"
+          },
+          "relationships" : [ {
+            "description" : "Sends GraphQL requests and SSE subscriptions to",
+            "destinationId" : "16",
+            "id" : "38",
+            "sourceId" : "21",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Sends GraphQL requests and SSE subscriptions to",
+            "destinationId" : "15",
+            "id" : "39",
+            "linkedRelationshipId" : "38",
+            "sourceId" : "21"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "Apollo Client, graphql-sse"
+        } ],
+        "description" : "Runs the bank-account demo in the browser.",
+        "documentation" : { },
+        "id" : "19",
+        "name" : "Example Alvyn Full Stack App Client",
+        "properties" : {
+          "structurizr.dsl.identifier" : "exampleClient"
+        },
+        "relationships" : [ {
+          "description" : "Sends GraphQL requests and SSE subscriptions to",
+          "destinationId" : "16",
+          "id" : "40",
+          "linkedRelationshipId" : "38",
+          "sourceId" : "19"
+        }, {
+          "description" : "Sends GraphQL requests and SSE subscriptions to",
+          "destinationId" : "15",
+          "id" : "41",
+          "linkedRelationshipId" : "38",
+          "sourceId" : "19"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "TypeScript, React, Apollo Client"
+      }, {
+        "components" : [ {
+          "description" : "Renders the landing page and MDX documentation pages.",
+          "documentation" : { },
+          "id" : "23",
+          "name" : "Home and Docs Pages",
+          "properties" : {
+            "structurizr.dsl.identifier" : "websitePages"
+          },
+          "relationships" : [ {
+            "description" : "Serves interactive landing content to",
+            "destinationId" : "27",
+            "id" : "76",
+            "sourceId" : "23",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Serves interactive landing content to",
+            "destinationId" : "26",
+            "id" : "77",
+            "linkedRelationshipId" : "76",
+            "sourceId" : "23"
+          }, {
+            "description" : "Loads documentation through",
+            "destinationId" : "24",
+            "id" : "84",
+            "sourceId" : "23",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "Next.js, Fumadocs"
+        }, {
+          "description" : "Loads documentation content for routes and search.",
+          "documentation" : { },
+          "id" : "24",
+          "name" : "Documentation Source",
+          "properties" : {
+            "structurizr.dsl.identifier" : "websiteSource"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Fumadocs"
+        }, {
+          "description" : "Serves a static search index from documentation content.",
+          "documentation" : { },
+          "id" : "25",
+          "name" : "Search API",
+          "properties" : {
+            "structurizr.dsl.identifier" : "websiteSearch"
+          },
+          "relationships" : [ {
+            "description" : "Builds its index from",
+            "destinationId" : "24",
+            "id" : "85",
+            "sourceId" : "25",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "Next.js, Fumadocs"
+        } ],
+        "description" : "Serves the product site, documentation, and search data.",
+        "documentation" : { },
+        "id" : "22",
+        "name" : "Website Server",
+        "properties" : {
+          "structurizr.dsl.identifier" : "websiteServer"
+        },
+        "relationships" : [ {
+          "description" : "Serves interactive landing content to",
+          "destinationId" : "27",
+          "id" : "78",
+          "linkedRelationshipId" : "76",
+          "sourceId" : "22"
+        }, {
+          "description" : "Serves interactive landing content to",
+          "destinationId" : "26",
+          "id" : "79",
+          "linkedRelationshipId" : "76",
+          "sourceId" : "22"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "TypeScript, Next.js"
+      }, {
+        "components" : [ {
+          "description" : "Shows a local interactive event-history example.",
+          "documentation" : { },
+          "id" : "27",
+          "name" : "Journey Simulator",
+          "properties" : {
+            "structurizr.dsl.identifier" : "websiteJourney"
+          },
+          "tags" : "Element,Component",
+          "technology" : "React"
+        }, {
+          "description" : "Requests and displays documentation search results.",
+          "documentation" : { },
+          "id" : "28",
+          "name" : "Search Dialog",
+          "properties" : {
+            "structurizr.dsl.identifier" : "websiteSearchUi"
+          },
+          "relationships" : [ {
+            "description" : "Requests search data from",
+            "destinationId" : "25",
+            "id" : "80",
+            "sourceId" : "28",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Requests search data from",
+            "destinationId" : "22",
+            "id" : "81",
+            "linkedRelationshipId" : "80",
+            "sourceId" : "28"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "React, Fumadocs"
+        } ],
+        "description" : "Runs interactive product-site features in the browser.",
+        "documentation" : { },
+        "id" : "26",
+        "name" : "Website Client",
+        "properties" : {
+          "structurizr.dsl.identifier" : "websiteClient"
+        },
+        "relationships" : [ {
+          "description" : "Requests search data from",
+          "destinationId" : "25",
+          "id" : "82",
+          "linkedRelationshipId" : "80",
+          "sourceId" : "26"
+        }, {
+          "description" : "Requests search data from",
+          "destinationId" : "22",
+          "id" : "83",
+          "linkedRelationshipId" : "80",
+          "sourceId" : "26"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "TypeScript, React"
+      } ],
+      "description" : "Provides TypeScript event history on PostgreSQL and repository-owned examples and documentation.",
+      "documentation" : { },
+      "id" : "3",
+      "name" : "Alvyn",
+      "properties" : {
+        "structurizr.dsl.identifier" : "alvyn"
+      },
+      "relationships" : [ {
+        "description" : "Creates and verifies tables in",
+        "destinationId" : "2",
+        "id" : "70",
+        "linkedRelationshipId" : "68",
+        "sourceId" : "3"
+      } ],
+      "tags" : "Element,Software System"
+    } ]
+  },
+  "name" : "Name",
+  "properties" : {
+    "structurizr.inspection.error" : "60",
+    "structurizr.inspection.info" : "0",
+    "structurizr.inspection.ignore" : "0",
+    "structurizr.inspection.warning" : "0"
+  },
+  "views" : {
+    "componentViews" : [ {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "4",
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "2",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "5",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "6",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "7",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "8",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "9",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "10",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "11",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "12",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "13",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "14",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "15",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "alvyn-library-components",
+      "name" : "Component View: Alvyn - Alvyn Library",
+      "order" : 3,
+      "relationships" : [ {
+        "id" : "29"
+      }, {
+        "id" : "46"
+      }, {
+        "id" : "50"
+      }, {
+        "id" : "54"
+      }, {
+        "id" : "55"
+      }, {
+        "id" : "56"
+      }, {
+        "id" : "57"
+      }, {
+        "id" : "58"
+      }, {
+        "id" : "59"
+      }, {
+        "id" : "60"
+      }, {
+        "id" : "61"
+      }, {
+        "id" : "62"
+      }, {
+        "id" : "63"
+      }, {
+        "id" : "64"
+      }, {
+        "id" : "65"
+      }, {
+        "id" : "66"
+      }, {
+        "id" : "67"
+      }, {
+        "id" : "68"
+      }, {
+        "id" : "71"
+      }, {
+        "id" : "72"
+      }, {
+        "id" : "73"
+      }, {
+        "id" : "74"
+      }, {
+        "id" : "75"
+      } ]
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "15",
+      "elements" : [ {
+        "id" : "4",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "16",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "17",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "18",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "19",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "example-server-components",
+      "name" : "Component View: Alvyn - Example Alvyn Full Stack App Server",
+      "order" : 4,
+      "relationships" : [ {
+        "id" : "40"
+      }, {
+        "id" : "42"
+      }, {
+        "id" : "43"
+      }, {
+        "id" : "45"
+      }, {
+        "id" : "49"
+      }, {
+        "id" : "52"
+      } ]
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "19",
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "15",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "20",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "21",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "example-client-components",
+      "name" : "Component View: Alvyn - Example Alvyn Full Stack App Client",
+      "order" : 5,
+      "relationships" : [ {
+        "id" : "32"
+      }, {
+        "id" : "37"
+      }, {
+        "id" : "39"
+      } ]
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "22",
+      "elements" : [ {
+        "id" : "23",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "24",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "25",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "26",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "website-server-components",
+      "name" : "Component View: Alvyn - Website Server",
+      "order" : 6,
+      "relationships" : [ {
+        "id" : "77"
+      }, {
+        "id" : "82"
+      }, {
+        "id" : "84"
+      }, {
+        "id" : "85"
+      } ]
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "26",
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "22",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "27",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "28",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "website-client-components",
+      "name" : "Component View: Alvyn - Website Client",
+      "order" : 7,
+      "relationships" : [ {
+        "id" : "34"
+      }, {
+        "id" : "36"
+      }, {
+        "id" : "78"
+      }, {
+        "id" : "81"
+      } ]
+    } ],
+    "configuration" : {
+      "styles" : { },
+      "terminology" : { }
+    },
+    "containerViews" : [ {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "2",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "4",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "15",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "19",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "22",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "26",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "alvyn-containers",
+      "name" : "Container View: Alvyn",
+      "order" : 2,
+      "relationships" : [ {
+        "id" : "30"
+      }, {
+        "id" : "33"
+      }, {
+        "id" : "35"
+      }, {
+        "id" : "41"
+      }, {
+        "id" : "47"
+      }, {
+        "id" : "69"
+      }, {
+        "id" : "79"
+      }, {
+        "id" : "83"
+      } ],
+      "softwareSystemId" : "3"
+    } ],
+    "systemContextViews" : [ {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "2",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "3",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "key" : "alvyn-context",
+      "name" : "System Context View: Alvyn",
+      "order" : 1,
+      "relationships" : [ {
+        "id" : "31"
+      }, {
+        "id" : "70"
+      } ],
+      "softwareSystemId" : "3"
+    } ]
+  }
+}
